@@ -190,34 +190,25 @@ export function PatientDetails({
                   <p className="text-sm">{patient.birthDate ? formatDateToBR(patient.birthDate) : "Não informado"}</p>
                 </div>
                 <Separator />
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-gray-400" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Telefone</p>
-                    <p className="text-sm">{patient.phone || "Não informado"}</p>
-                  </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Telefone</p>
+                  <p className="text-sm">{patient.phone || "Não informado"}</p>
                 </div>
                 {patient.email && (
                   <>
                     <Separator />
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Email</p>
-                        <p className="text-sm">{patient.email}</p>
-                      </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Email</p>
+                      <p className="text-sm">{patient.email}</p>
                     </div>
                   </>
                 )}
                 {patient.address && (
                   <>
                     <Separator />
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Endereço</p>
-                        <p className="text-sm">{patient.address}</p>
-                      </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Endereço</p>
+                      <p className="text-sm">{patient.address}</p>
                     </div>
                   </>
                 )}

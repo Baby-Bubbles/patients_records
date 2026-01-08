@@ -28,13 +28,8 @@ export function FileList({ files, onFileDeleted, showDeleteButton = false, patie
     try {
       const { downloadUrl, fileName } = await ApiClient.getFileDownloadUrl(file.id)
 
-      // Criar link temporário para download
-      const link = document.createElement("a")
-      link.href = downloadUrl
-      link.download = fileName || file.originalName
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      // Abrir arquivo em nova aba
+      window.open(downloadUrl, "_blank")
     } catch (error) {
       setError(`Erro ao baixar ${file.originalName}: ${(error as Error).message}`)
     } finally {

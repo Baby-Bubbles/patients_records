@@ -302,4 +302,92 @@ export class DatabaseService {
       createdAt: dbAppointment.created_at,
     }
   }
+
+  // Heartbeat operations
+  static async executeHeartbeatCheck(): Promise<{
+    success: boolean
+    patientCount: number | null
+    responseTimeMs: number
+    error?: any
+  }> {
+    const startTime = Date.now()
+
+    try {
+      const { count, error } = await supabase.from("patients").select("*", { count: "exact", head: true })
+
+      const responseTimeMs = Date.now() - startTime
+
+      if (error) {
+        return {
+          success: false,
+          patientCount: null,
+          responseTimeMs,
+          error,
+        }
+      }
+
+      return {
+        success: true,
+        patientCount: count ?? 0,
+        responseTimeMs,
+      }
+    } catch (error) {
+      const responseTimeMs = Date.now() - startTime
+      return {
+        success: false,
+        patientCount: null,
+        responseTimeMs,
+        error,
+      }
+    }
+  }
+
+  static async logHeartbeat(logData: {
+    status: "success" | "failure"
+    responseTimeMs: number
+    patientCount?: number | null
+    errorMessage?: string
+    errorDetails?: any
+  }): Promise<void> {
+    const { error } = await supabase.from("heartbeat_logs").insert({
+      status: logData.status,
+      response_time_ms: logData.responseTimeMs,
+      patient_count: logData.patientCount ?? null,
+      error_message: logData.errorMessage ?? null,
+      error_details: logData.errorDetails ? JSON.stringify(logData.errorDetails) : null,
+    })
+
+    if (error) {
+      // Log to console but don't throw - we don't want heartbeat logging to fail the heartbeat
+      console.error("Failed to log heartbeat to database:", error)
+    }
+  }
+
+  static async getRecentHeartbeats(limit: number = 10): Promise<any[]> {
+    const { data, error } = await supabase
+      .from("heartbeat_logs")
+      .select("*")
+      .order("executed_at", { ascending: false })
+      .limit(limit)
+
+    if (error) throw error
+
+    return data || []
+  }
+
+  static async getLastHeartbeat(): Promise<any | null> {
+    const { data, error } = await supabase
+      .from("heartbeat_logs")
+      .select("*")
+      .order("executed_at", { ascending: false })
+      .limit(1)
+      .single()
+
+    if (error) {
+      if (error.code === "PGRST116") return null // Not found
+      throw error
+    }
+
+    return data
+  }
 }
