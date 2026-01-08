@@ -2,10 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 import { ShareService } from "@/lib/share-service"
 import { DatabaseService } from "@/lib/database-service"
 
-export async function POST(request: NextRequest, { params }: { params: { token: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   try {
+    const { token } = await params
     const { password } = await request.json()
-    const token = params.token
 
     console.log("🔐 API: Validando acesso ao token compartilhado")
     console.log("📋 Token recebido:", token?.substring(0, 20) + "...")
@@ -57,9 +57,9 @@ export async function POST(request: NextRequest, { params }: { params: { token: 
 }
 
 // Verificar se token é válido (sem autenticação)
-export async function GET(request: NextRequest, { params }: { params: { token: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   try {
-    const token = params.token
+    const { token } = await params
 
     console.log("🔍 API: Verificando validade do token")
     console.log("📋 Token:", token?.substring(0, 20) + "...")

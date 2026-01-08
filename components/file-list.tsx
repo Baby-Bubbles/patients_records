@@ -32,7 +32,6 @@ export function FileList({ files, onFileDeleted, showDeleteButton = false, patie
       const link = document.createElement("a")
       link.href = downloadUrl
       link.download = fileName || file.originalName
-      link.target = "_blank"
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

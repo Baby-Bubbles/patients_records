@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { DatabaseService } from "@/lib/database-service"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const appointment = await DatabaseService.getAppointment(params.id)
+    const { id } = await params
+    const appointment = await DatabaseService.getAppointment(id)
     if (!appointment) {
       return NextResponse.json({ error: "Atendimento não encontrado" }, { status: 404 })
     }
@@ -14,12 +15,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const appointmentData = await request.json()
     const appointment = await DatabaseService.updateAppointment({
       ...appointmentData,
-      id: params.id,
+      id,
     })
     return NextResponse.json(appointment)
   } catch (error) {
@@ -28,9 +30,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await DatabaseService.deleteAppointment(params.id)
+    const { id } = await params
+    await DatabaseService.deleteAppointment(id)
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Erro ao deletar atendimento:", error)

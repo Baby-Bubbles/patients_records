@@ -225,6 +225,7 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                     onChange={handleChange}
                     required
                     disabled={submitting}
+                    placeholder="dd/mm/aaaa hh:mm"
                   />
                 </div>
                 <div className="space-y-2">

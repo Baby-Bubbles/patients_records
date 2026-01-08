@@ -1,13 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase-client"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    // Await params for Next.js 15 compatibility
+    const { id } = await params
+
     // Buscar informações do arquivo
     const { data: fileData, error: fetchError } = await supabase
       .from("file_attachments")
       .select("file_path, original_name")
-      .eq("id", params.id)
+      .eq("id", id)
       .single()
 
     if (fetchError) {

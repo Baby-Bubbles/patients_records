@@ -1,13 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase-client"
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
+
     // Primeiro, buscar informações do arquivo
     const { data: fileData, error: fetchError } = await supabase
       .from("file_attachments")
       .select("file_path")
-      .eq("id", params.id)
+      .eq("id", id)
       .single()
 
     if (fetchError) {
@@ -24,7 +26,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     // Deletar do banco
-    const { error: dbError } = await supabase.from("file_attachments").delete().eq("id", params.id)
+    const { error: dbError } = await supabase.from("file_attachments").delete().eq("id", id)
 
     if (dbError) {
       console.error("Erro ao deletar do banco:", dbError)

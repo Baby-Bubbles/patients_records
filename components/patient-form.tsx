@@ -90,6 +90,7 @@ export function PatientForm({ onSubmit, onCancel }: PatientFormProps) {
                   value={formData.birthDate}
                   onChange={handleChange}
                   required
+                  placeholder="dd/mm/aaaa"
                 />
               </div>
               <div className="space-y-2">

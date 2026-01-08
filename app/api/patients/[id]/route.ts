@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { DatabaseService } from "@/lib/database-service"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const patient = await DatabaseService.getPatient(params.id)
+    const { id } = await params
+    const patient = await DatabaseService.getPatient(id)
     if (!patient) {
       return NextResponse.json({ error: "Paciente não encontrado" }, { status: 404 })
     }
@@ -14,12 +15,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const patientData = await request.json()
     const patient = await DatabaseService.updatePatient({
       ...patientData,
-      id: params.id,
+      id,
     })
     return NextResponse.json(patient)
   } catch (error) {
@@ -28,9 +30,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await DatabaseService.deletePatient(params.id)
+    const { id } = await params
+    await DatabaseService.deletePatient(id)
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Erro ao deletar paciente:", error)
