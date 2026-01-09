@@ -26,6 +26,12 @@ O **Prontuário Eletrônico** é uma aplicação web completa para gerenciamento
   - Row Level Security (RLS) habilitado
 - **@supabase/supabase-js 2.90.0** - Cliente Supabase
 
+### Autenticação & Segurança
+- **jose** - JWT encryption/decryption para sessões
+- **Next.js Middleware** - Proteção de rotas
+- **httpOnly Cookies** - Armazenamento seguro de sessões
+- **Server Actions** - Autenticação server-side
+
 ### Ferramentas de Desenvolvimento
 - **pnpm** - Gerenciador de pacotes
 - **ESLint** - Linter
@@ -36,12 +42,16 @@ O **Prontuário Eletrônico** é uma aplicação web completa para gerenciamento
 ```
 .
 ├── app/                          # Next.js App Router
+│   ├── actions/                  # Server Actions
+│   │   └── auth.ts               # Ações de login/logout
 │   ├── api/                      # API Routes
 │   │   ├── appointments/         # Endpoints de atendimentos
+│   │   ├── cron/                 # Endpoints de cron jobs
 │   │   ├── files/                # Endpoints de arquivos
 │   │   ├── patients/             # Endpoints de pacientes
 │   │   └── share/                # Endpoints de compartilhamento
 │   ├── diagnostics/              # Página de diagnóstico do sistema
+│   ├── login/                    # Página de login
 │   ├── share/                    # Páginas de compartilhamento
 │   ├── layout.tsx                # Layout raiz
 │   ├── page.tsx                  # Página inicial (lista de pacientes)
@@ -58,6 +68,7 @@ O **Prontuário Eletrônico** é uma aplicação web completa para gerenciamento
 │   └── database-status.tsx       # Status da conexão
 ├── lib/                          # Utilitários e serviços
 │   ├── api-client.ts             # Cliente HTTP para API
+│   ├── auth.ts                   # Autenticação e sessões JWT
 │   ├── database-service.ts       # Serviço de banco de dados
 │   ├── supabase-client.ts        # Cliente Supabase
 │   ├── file-storage.ts           # Serviço de armazenamento
@@ -67,7 +78,9 @@ O **Prontuário Eletrônico** é uma aplicação web completa para gerenciamento
 │   └── share-service.ts          # Serviço de compartilhamento
 ├── scripts/                      # Scripts SQL
 │   ├── 001-create-tables.sql     # Criação de tabelas
-│   └── 002-create-storage-bucket.sql # Criação do bucket
+│   ├── 002-create-storage-bucket.sql # Criação do bucket
+│   └── 003-create-heartbeat-table.sql # Tabela de heartbeat logs
+├── middleware.ts                 # Middleware de autenticação (raiz)
 ├── public/                       # Arquivos estáticos
 ├── styles/                       # Estilos adicionais
 └── utils/                        # Utilitários gerais
@@ -119,6 +132,18 @@ O **Prontuário Eletrônico** é uma aplicação web completa para gerenciamento
 - uploaded_at: TIMESTAMP
 ```
 
+### Tabela: `heartbeat_logs` (Logs de Heartbeat)
+```sql
+- id: UUID (PK)
+- executed_at: TIMESTAMP - Data/hora da execução
+- status: VARCHAR(20) - Status (success/failure)
+- response_time_ms: INTEGER - Tempo de resposta em ms
+- patient_count: INTEGER - Total de pacientes (opcional)
+- error_message: TEXT - Mensagem de erro (opcional)
+- error_details: JSONB - Detalhes do erro (opcional)
+- created_at: TIMESTAMP
+```
+
 ## Funcionalidades
 
 ### Gestão de Pacientes
@@ -142,10 +167,18 @@ O **Prontuário Eletrônico** é uma aplicação web completa para gerenciamento
 - ✅ Exclusão de anexos
 - ✅ Validação de tipos e tamanhos
 
+### Autenticação e Segurança
+- ✅ Proteção por senha com sessões JWT
+- ✅ Cookies httpOnly para segurança contra XSS
+- ✅ Middleware de autenticação em todas as rotas
+- ✅ Sessões de 7 dias com renovação automática
+- ✅ Página de login em PT-BR
+
 ### Recursos Adicionais
 - ✅ Sistema de diagnóstico para verificar conectividade
+- ✅ Heartbeat diário automático (previne pausa do Supabase)
 - ✅ Migração de dados do localStorage para Supabase
-- ✅ Compartilhamento de atendimentos (em desenvolvimento)
+- ✅ Compartilhamento de atendimentos com token e senha
 - ✅ Interface responsiva (mobile-first)
 - ✅ Analytics com Vercel Analytics
 
@@ -161,11 +194,25 @@ O **Prontuário Eletrônico** é uma aplicação web completa para gerenciamento
 Crie um arquivo `.env.local` na raiz do projeto com as seguintes variáveis:
 
 ```bash
+# Supabase Configuration
 NEXT_PUBLIC_db2_SUPABASE_URL=sua_url_do_supabase
 NEXT_PUBLIC_db2_SUPABASE_PUBLISHABLE_KEY=sua_chave_publica_do_supabase
+
+# Authentication - Single shared password
+APP_PASSWORD=sua_senha_segura_aqui
+
+# Session encryption secret (generate with: openssl rand -base64 32)
+SESSION_SECRET=sua_session_secret_aqui
+
+# Vercel Cron Secret (generate with: openssl rand -base64 32)
+CRON_SECRET=sua_cron_secret_aqui
 ```
 
-**Importante:** As variáveis usam o prefixo `db2_` conforme configurado pelo Vercel V0.
+**Importante:**
+- As variáveis Supabase usam o prefixo `db2_` conforme configurado pelo Vercel V0
+- `APP_PASSWORD`: Senha compartilhada para acessar o sistema (mínimo 12 caracteres)
+- `SESSION_SECRET`: Chave para criptografar sessões JWT (gere com `openssl rand -base64 32`)
+- `CRON_SECRET`: Proteção do endpoint de heartbeat (gere com `openssl rand -base64 32`)
 
 ### Configuração do Supabase
 
@@ -176,12 +223,18 @@ NEXT_PUBLIC_db2_SUPABASE_PUBLISHABLE_KEY=sua_chave_publica_do_supabase
 
 2. **Executar Scripts SQL**
    - Abra o SQL Editor no Supabase
-   - Execute `scripts/001-create-tables.sql`
-   - Execute `scripts/002-create-storage-bucket.sql`
+   - Execute `scripts/001-create-tables.sql` (tabelas principais)
+   - Execute `scripts/002-create-storage-bucket.sql` (bucket de arquivos)
+   - Execute `scripts/003-create-heartbeat-table.sql` (logs de heartbeat)
 
 3. **Configurar Storage**
    - Verifique se o bucket `medical-files` foi criado
    - Confirme as políticas de acesso no painel Storage
+
+4. **Configurar Cron Job no Vercel** (Produção)
+   - O arquivo `vercel.json` já está configurado
+   - Heartbeat executa diariamente à meia-noite UTC
+   - Previne pausa do banco Supabase por inatividade
 
 ## Instalação e Execução
 
@@ -214,9 +267,30 @@ O servidor de desenvolvimento estará disponível em `http://localhost:3000`
 5. Interface é atualizada com os dados completos
 
 ### Autenticação e Segurança
+
+#### Sistema de Autenticação
+- **Senha única compartilhada**: Acesso controlado via `APP_PASSWORD`
+- **Sessões JWT**: Criptografia HS256 com chave `SESSION_SECRET`
+- **Cookies httpOnly**: Proteção contra ataques XSS
+- **Middleware Next.js**: Proteção em todas as rotas privadas
+- **Duração da sessão**: 7 dias com renovação automática
+- **Server Actions**: Autenticação server-side com CSRF protection
+
+#### Rotas Protegidas
+- `/` - Dashboard principal (requer login)
+- `/api/patients/*` - Gestão de pacientes (requer login)
+- `/api/appointments/*` - Gestão de atendimentos (requer login)
+- `/api/files/*` - Upload/download de arquivos (requer login)
+
+#### Rotas Públicas
+- `/login` - Página de autenticação
+- `/diagnostics` - Status do sistema
+- `/share/[token]` - Compartilhamento com token e senha própria
+- `/api/cron/heartbeat` - Protegido por `CRON_SECRET`
+
+#### Banco de Dados
 - Row Level Security (RLS) habilitado em todas as tabelas
-- Políticas configuradas para permitir acesso público (ajustar para produção)
-- Uploads limitados por políticas de storage
+- Políticas de acesso configuradas via Supabase
 - URLs de download assinadas com expiração de 1 hora
 
 ## Formato de Data
@@ -250,21 +324,28 @@ Acesse `/diagnostics` para verificar:
 
 ## Roadmap
 
+### Concluído ✅
+- [x] Sistema de autenticação com senha única
+- [x] Proteção de rotas com middleware
+- [x] Sessões JWT com httpOnly cookies
+- [x] Heartbeat automático para Supabase
+- [x] Sistema de compartilhamento com token e senha
+
 ### Em Desenvolvimento
-- [ ] Sistema de autenticação de usuários
-- [ ] Controle de acesso baseado em perfis
+- [ ] Controle de acesso baseado em perfis (multi-usuário)
 - [ ] Relatórios e estatísticas
-- [ ] Sistema de compartilhamento completo
 - [ ] Impressão de prontuários
 - [ ] Backup automático de dados
 
 ### Melhorias Futuras
+- [ ] Autenticação com 2FA
 - [ ] Agendamento de consultas
 - [ ] Lembretes e notificações
 - [ ] Histórico de versões de atendimentos
 - [ ] Assinatura digital de documentos
 - [ ] Integração com outros sistemas (TISS, etc.)
 - [ ] Modo offline com sincronização
+- [ ] Rate limiting no login
 
 ## Desenvolvimento
 
@@ -286,6 +367,23 @@ Este é um projeto privado/proprietário. Todos os direitos reservados.
 
 ---
 
-**Última atualização:** 2026-01-07
-**Versão:** 0.1.0
+**Última atualização:** 2026-01-08
+**Versão:** 0.2.0
 **Status:** Em desenvolvimento ativo
+
+## Changelog
+
+### v0.2.0 (2026-01-08)
+- ✅ Implementado sistema de autenticação com senha única
+- ✅ Adicionado middleware de proteção de rotas
+- ✅ Sessões JWT com cookies httpOnly (7 dias)
+- ✅ Página de login em PT-BR
+- ✅ Heartbeat diário para prevenir pausa do Supabase
+- ✅ Proteção de endpoints de API
+
+### v0.1.0 (2026-01-07)
+- ✅ Versão inicial do prontuário eletrônico
+- ✅ CRUD completo de pacientes e atendimentos
+- ✅ Sistema de upload de arquivos
+- ✅ Compartilhamento com token e senha
+- ✅ Migração do Vercel V0 para desenvolvimento local
