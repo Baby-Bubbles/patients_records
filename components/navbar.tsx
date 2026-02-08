@@ -42,7 +42,7 @@ export function Navbar({ onExportCSV }: NavbarProps) {
                   className="h-10 w-auto"
                 />
                 <span className="hidden sm:block text-lg font-semibold text-secondary">
-                  Baby Bubbles
+                  Baby Bubbles - Prontuário Eletrônico
                 </span>
               </Link>
             </div>
