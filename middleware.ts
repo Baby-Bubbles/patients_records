@@ -16,6 +16,7 @@ export async function middleware(request: NextRequest) {
     "/favicon.ico",
     "/icon",
     "/apple-icon",
+    "/logo.png",
   ]
 
   // Check if current path is public
