@@ -23,10 +23,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     console.log("✅ Token válido, buscando dados do paciente:", tokenData.patientId)
 
-    // Buscar dados do paciente e atendimentos
-    const [patient, appointments] = await Promise.all([
+    // Buscar dados do paciente, diagnósticos e atendimentos
+    const [patient, diagnosticos, atendimentos] = await Promise.all([
       DatabaseService.getPatient(tokenData.patientId),
-      DatabaseService.getAppointments(tokenData.patientId),
+      DatabaseService.getDiagnosticos(tokenData.patientId),
+      DatabaseService.getAtendimentos(),
     ])
 
     if (!patient) {
@@ -34,11 +35,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Paciente não encontrado" }, { status: 404 })
     }
 
+    // Filter atendimentos to only include those belonging to this patient's diagnosticos
+    const patientDiagnosticoIds = diagnosticos.map(d => d.id)
+    const patientAtendimentos = atendimentos.filter(a =>
+      patientDiagnosticoIds.includes(a.diagnosticoId)
+    )
+
     console.log("🎉 Dados carregados com sucesso!")
 
     return NextResponse.json({
       patient,
-      appointments,
+      diagnosticos,
+      atendimentos: patientAtendimentos,
       tokenInfo: {
         expiresAt: tokenData.expiresAt,
         createdAt: tokenData.timestamp,

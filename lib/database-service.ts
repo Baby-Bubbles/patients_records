@@ -1,5 +1,5 @@
 import { supabase, type DatabasePatient } from "./supabase-client"
-import type { Patient, Appointment, FileAttachment } from "@/app/page"
+import type { Patient, Appointment, FileAttachment, Diagnostico, Atendimento } from "@/app/page"
 
 export class DatabaseService {
   // Pacientes
@@ -184,6 +184,222 @@ export class DatabaseService {
     if (error) throw error
   }
 
+  // Diagnósticos
+  static async getDiagnosticos(patientId?: string): Promise<Diagnostico[]> {
+    let query = supabase
+      .from("diagnosticos")
+      .select(`
+        *,
+        file_attachments (
+          id,
+          original_name,
+          file_path,
+          file_size,
+          file_type,
+          uploaded_at
+        )
+      `)
+      .order("start_date", { ascending: false })
+
+    if (patientId) {
+      query = query.eq("patient_id", patientId)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    return data.map(this.mapDatabaseDiagnosticoToDiagnostico)
+  }
+
+  static async getDiagnostico(id: string): Promise<Diagnostico | null> {
+    const { data, error } = await supabase
+      .from("diagnosticos")
+      .select(`
+        *,
+        file_attachments (
+          id,
+          original_name,
+          file_path,
+          file_size,
+          file_type,
+          uploaded_at
+        )
+      `)
+      .eq("id", id)
+      .single()
+
+    if (error) {
+      if (error.code === "PGRST116") return null
+      throw error
+    }
+
+    return this.mapDatabaseDiagnosticoToDiagnostico(data)
+  }
+
+  static async createDiagnostico(diagnostico: Omit<Diagnostico, "id" | "createdAt">): Promise<Diagnostico> {
+    const { data, error } = await supabase
+      .from("diagnosticos")
+      .insert({
+        patient_id: diagnostico.patientId,
+        start_date: diagnostico.startDate,
+        discharge_date: diagnostico.dischargeDate || null,
+        doctor: diagnostico.doctor || null,
+        anamnesis: diagnostico.anamnesis || null,
+        diagnosis: diagnostico.diagnosis || null,
+        heart_rate: diagnostico.heartRate || null,
+        respiratory_rate: diagnostico.respiratoryRate || null,
+        saturation: diagnostico.saturation || null,
+        temperature: diagnostico.temperature || null,
+        cardiac_auscultation: diagnostico.cardiacAuscultation || null,
+        evolution: diagnostico.evolution || null,
+        medications: diagnostico.medications || null,
+        additional_guidance: diagnostico.additionalGuidance || null,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return (await this.getDiagnostico(data.id)) as Diagnostico
+  }
+
+  static async updateDiagnostico(diagnostico: Diagnostico): Promise<Diagnostico> {
+    const { data, error } = await supabase
+      .from("diagnosticos")
+      .update({
+        start_date: diagnostico.startDate,
+        discharge_date: diagnostico.dischargeDate || null,
+        doctor: diagnostico.doctor || null,
+        anamnesis: diagnostico.anamnesis || null,
+        diagnosis: diagnostico.diagnosis || null,
+        heart_rate: diagnostico.heartRate || null,
+        respiratory_rate: diagnostico.respiratoryRate || null,
+        saturation: diagnostico.saturation || null,
+        temperature: diagnostico.temperature || null,
+        cardiac_auscultation: diagnostico.cardiacAuscultation || null,
+        evolution: diagnostico.evolution || null,
+        medications: diagnostico.medications || null,
+        additional_guidance: diagnostico.additionalGuidance || null,
+      })
+      .eq("id", diagnostico.id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return (await this.getDiagnostico(data.id)) as Diagnostico
+  }
+
+  static async deleteDiagnostico(id: string): Promise<void> {
+    const { error } = await supabase.from("diagnosticos").delete().eq("id", id)
+
+    if (error) throw error
+  }
+
+  // Atendimentos
+  static async getAtendimentos(diagnosticoId?: string): Promise<Atendimento[]> {
+    let query = supabase
+      .from("atendimentos")
+      .select(`
+        *,
+        file_attachments (
+          id,
+          original_name,
+          file_path,
+          file_size,
+          file_type,
+          uploaded_at
+        )
+      `)
+      .order("date", { ascending: false })
+
+    if (diagnosticoId) {
+      query = query.eq("diagnostico_id", diagnosticoId)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    return data.map(this.mapDatabaseAtendimentoToAtendimento)
+  }
+
+  static async getAtendimento(id: string): Promise<Atendimento | null> {
+    const { data, error } = await supabase
+      .from("atendimentos")
+      .select(`
+        *,
+        file_attachments (
+          id,
+          original_name,
+          file_path,
+          file_size,
+          file_type,
+          uploaded_at
+        )
+      `)
+      .eq("id", id)
+      .single()
+
+    if (error) {
+      if (error.code === "PGRST116") return null
+      throw error
+    }
+
+    return this.mapDatabaseAtendimentoToAtendimento(data)
+  }
+
+  static async createAtendimento(atendimento: Omit<Atendimento, "id" | "createdAt">): Promise<Atendimento> {
+    const { data, error } = await supabase
+      .from("atendimentos")
+      .insert({
+        diagnostico_id: atendimento.diagnosticoId,
+        date: atendimento.date,
+        heart_rate: atendimento.heartRate || null,
+        respiratory_rate: atendimento.respiratoryRate || null,
+        saturation: atendimento.saturation || null,
+        temperature: atendimento.temperature || null,
+        cardiac_auscultation: atendimento.cardiacAuscultation || null,
+        evolution: atendimento.evolution || null,
+        additional_guidance: atendimento.additionalGuidance || null,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return (await this.getAtendimento(data.id)) as Atendimento
+  }
+
+  static async updateAtendimento(atendimento: Atendimento): Promise<Atendimento> {
+    const { data, error } = await supabase
+      .from("atendimentos")
+      .update({
+        date: atendimento.date,
+        heart_rate: atendimento.heartRate || null,
+        respiratory_rate: atendimento.respiratoryRate || null,
+        saturation: atendimento.saturation || null,
+        temperature: atendimento.temperature || null,
+        cardiac_auscultation: atendimento.cardiacAuscultation || null,
+        evolution: atendimento.evolution || null,
+        additional_guidance: atendimento.additionalGuidance || null,
+      })
+      .eq("id", atendimento.id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return (await this.getAtendimento(data.id)) as Atendimento
+  }
+
+  static async deleteAtendimento(id: string): Promise<void> {
+    const { error } = await supabase.from("atendimentos").delete().eq("id", id)
+
+    if (error) throw error
+  }
+
   // Anexos de arquivos
   static async createFileAttachments(appointmentId: string, attachments: FileAttachment[]): Promise<void> {
     const fileData = attachments.map((attachment) => ({
@@ -300,6 +516,59 @@ export class DatabaseService {
           type: file.file_type,
         })) || [],
       createdAt: dbAppointment.created_at,
+    }
+  }
+
+  private static mapDatabaseDiagnosticoToDiagnostico(dbDiagnostico: any): Diagnostico {
+    return {
+      id: dbDiagnostico.id,
+      patientId: dbDiagnostico.patient_id,
+      startDate: dbDiagnostico.start_date,
+      dischargeDate: dbDiagnostico.discharge_date || undefined,
+      doctor: dbDiagnostico.doctor || undefined,
+      anamnesis: dbDiagnostico.anamnesis || undefined,
+      diagnosis: dbDiagnostico.diagnosis || undefined,
+      heartRate: dbDiagnostico.heart_rate || undefined,
+      respiratoryRate: dbDiagnostico.respiratory_rate || undefined,
+      saturation: dbDiagnostico.saturation || undefined,
+      temperature: dbDiagnostico.temperature ? Number(dbDiagnostico.temperature) : undefined,
+      cardiacAuscultation: dbDiagnostico.cardiac_auscultation || undefined,
+      evolution: dbDiagnostico.evolution || undefined,
+      medications: dbDiagnostico.medications || undefined,
+      additionalGuidance: dbDiagnostico.additional_guidance || undefined,
+      attachments:
+        dbDiagnostico.file_attachments?.filter((f: any) => f !== null).map((file: any) => ({
+          id: file.id,
+          originalName: file.original_name,
+          size: file.file_size,
+          type: file.file_type,
+        })) || [],
+      createdAt: dbDiagnostico.created_at,
+      updatedAt: dbDiagnostico.updated_at || undefined,
+    }
+  }
+
+  private static mapDatabaseAtendimentoToAtendimento(dbAtendimento: any): Atendimento {
+    return {
+      id: dbAtendimento.id,
+      diagnosticoId: dbAtendimento.diagnostico_id,
+      date: dbAtendimento.date,
+      heartRate: dbAtendimento.heart_rate || undefined,
+      respiratoryRate: dbAtendimento.respiratory_rate || undefined,
+      saturation: dbAtendimento.saturation || undefined,
+      temperature: dbAtendimento.temperature ? Number(dbAtendimento.temperature) : undefined,
+      cardiacAuscultation: dbAtendimento.cardiac_auscultation || undefined,
+      evolution: dbAtendimento.evolution || undefined,
+      additionalGuidance: dbAtendimento.additional_guidance || undefined,
+      attachments:
+        dbAtendimento.file_attachments?.filter((f: any) => f !== null).map((file: any) => ({
+          id: file.id,
+          originalName: file.original_name,
+          size: file.file_size,
+          type: file.file_type,
+        })) || [],
+      createdAt: dbAtendimento.created_at,
+      updatedAt: dbAtendimento.updated_at || undefined,
     }
   }
 

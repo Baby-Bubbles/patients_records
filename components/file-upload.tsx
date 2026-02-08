@@ -7,16 +7,15 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ApiClient } from "@/lib/api-client"
-import { formatFileSize, getFileIcon, isValidFileType, isValidFileSize } from "@/lib/file-utils"
+import { formatFileSize, getFileIcon, isValidFileType } from "@/lib/file-utils"
 
 interface FileUploadProps {
   appointmentId: string
   onFilesUploaded: (files: { id: string; originalName: string; size: number; type: string }[]) => void
   maxFiles?: number
-  maxSizeMB?: number
 }
 
-export function FileUpload({ appointmentId, onFilesUploaded, maxFiles = 5, maxSizeMB = 10 }: FileUploadProps) {
+export function FileUpload({ appointmentId, onFilesUploaded, maxFiles = 5 }: FileUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
   const [uploading, setUploading] = useState(false)
@@ -47,10 +46,6 @@ export function FileUpload({ appointmentId, onFilesUploaded, maxFiles = 5, maxSi
           newErrors.push(`${file.name}: Tipo de arquivo não permitido (${file.type})`)
           return false
         }
-        if (!isValidFileSize(file, maxSizeMB)) {
-          newErrors.push(`${file.name}: Arquivo muito grande (${formatFileSize(file.size)}, máx. ${maxSizeMB}MB)`)
-          return false
-        }
         return true
       })
 
@@ -64,7 +59,7 @@ export function FileUpload({ appointmentId, onFilesUploaded, maxFiles = 5, maxSi
       // Limpar input
       e.target.value = ""
     },
-    [selectedFiles.length, maxFiles, maxSizeMB],
+    [selectedFiles.length, maxFiles],
   )
 
   const removeFile = (index: number) => {
@@ -161,7 +156,7 @@ export function FileUpload({ appointmentId, onFilesUploaded, maxFiles = 5, maxSi
           <div className="flex flex-col sm:flex-row text-xs sm:text-sm text-gray-600">
             <label
               htmlFor="file-upload"
-              className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+              className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/80 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary"
             >
               <span>Clique para fazer upload</span>
               <input
@@ -177,7 +172,7 @@ export function FileUpload({ appointmentId, onFilesUploaded, maxFiles = 5, maxSi
             <p className="sm:pl-1">ou arraste e solte</p>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            PDF, JPG, PNG, DOC, XLS até {maxSizeMB}MB cada (máx. {maxFiles} arquivos)
+            PDF, JPG, PNG, DOC, XLS (máx. {maxFiles} arquivos)
           </p>
         </div>
       </div>

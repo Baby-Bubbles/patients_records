@@ -103,6 +103,80 @@ export class ApiClient {
     return this.handleResponse(response)
   }
 
+  // Diagnósticos
+  static async getDiagnosticos(patientId?: string) {
+    const url = patientId ? `/api/diagnosticos?patientId=${patientId}` : "/api/diagnosticos"
+    const response = await fetch(url)
+    return this.handleResponse(response)
+  }
+
+  static async getDiagnostico(id: string) {
+    const response = await fetch(`/api/diagnosticos/${id}`)
+    return this.handleResponse(response)
+  }
+
+  static async createDiagnostico(diagnostico: any) {
+    const response = await fetch("/api/diagnosticos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(diagnostico),
+    })
+    return this.handleResponse(response)
+  }
+
+  static async updateDiagnostico(id: string, diagnostico: any) {
+    const response = await fetch(`/api/diagnosticos/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(diagnostico),
+    })
+    return this.handleResponse(response)
+  }
+
+  static async deleteDiagnostico(id: string) {
+    const response = await fetch(`/api/diagnosticos/${id}`, {
+      method: "DELETE",
+    })
+    return this.handleResponse(response)
+  }
+
+  // Atendimentos
+  static async getAtendimentos(diagnosticoId?: string) {
+    const url = diagnosticoId ? `/api/atendimentos?diagnosticoId=${diagnosticoId}` : "/api/atendimentos"
+    const response = await fetch(url)
+    return this.handleResponse(response)
+  }
+
+  static async getAtendimento(id: string) {
+    const response = await fetch(`/api/atendimentos/${id}`)
+    return this.handleResponse(response)
+  }
+
+  static async createAtendimento(atendimento: any) {
+    const response = await fetch("/api/atendimentos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(atendimento),
+    })
+    return this.handleResponse(response)
+  }
+
+  static async updateAtendimento(id: string, atendimento: any) {
+    const response = await fetch(`/api/atendimentos/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(atendimento),
+    })
+    return this.handleResponse(response)
+  }
+
+  static async deleteAtendimento(id: string) {
+    const response = await fetch(`/api/atendimentos/${id}`, {
+      method: "DELETE",
+    })
+    return this.handleResponse(response)
+  }
+
   // Arquivos
   static async uploadFile(file: File, appointmentId: string) {
     try {
@@ -138,6 +212,44 @@ export class ApiClient {
           } else {
             throw new Error(`Erro do servidor: ${response.status} - ${response.statusText}`)
           }
+        }
+      }
+
+      const result = await response.json()
+      console.log(`✅ Upload concluído:`, result)
+      return result
+    } catch (error) {
+      console.error(`💥 Erro no upload:`, error)
+      throw error
+    }
+  }
+
+  // Upload polymorphic - for diagnosticos or atendimentos
+  static async uploadFilePolymorphic(
+    file: File,
+    entityType: "diagnostico" | "atendimento",
+    entityId: string
+  ) {
+    try {
+      console.log(`🔄 Iniciando upload de ${file.name} para ${entityType} ${entityId}`)
+
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("entityType", entityType)
+      formData.append("entityId", entityId)
+
+      const response = await fetch("/api/files/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const contentType = response.headers.get("content-type")
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || `Erro HTTP ${response.status}`)
+        } else {
+          throw new Error(`Erro do servidor: ${response.status} - ${response.statusText}`)
         }
       }
 

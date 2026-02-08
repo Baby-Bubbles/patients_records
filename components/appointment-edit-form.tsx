@@ -326,7 +326,7 @@ export function AppointmentEditForm({ appointment, patientName, onSubmit, onCanc
                     <div className="flex text-sm text-gray-600">
                       <label
                         htmlFor="attachments"
-                        className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                        className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/80 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary"
                       >
                         <span>Clique para fazer upload</span>
                         <input

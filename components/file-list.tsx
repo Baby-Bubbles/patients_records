@@ -112,7 +112,7 @@ export function FileList({ files, onFileDeleted, showDeleteButton = false, patie
                   size="sm"
                   onClick={() => handlePreview(file)}
                   disabled={downloading === fileId}
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-primary hover:text-primary/80"
                   title="Visualizar"
                 >
                   <Eye className="h-4 w-4" />

@@ -5,47 +5,57 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 270 50% 20%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 270 50% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 270 50% 20%;
+    /* Baby Bubbles Cyan #6df2f2 → HSL 180 85% 69% */
+    --primary: 180 85% 50%;
+    --primary-foreground: 180 100% 10%;
+    /* Baby Bubbles Purple Dark #582e89 → HSL 270 50% 36% */
+    --secondary: 270 50% 36%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 180 30% 96%;
+    --muted-foreground: 270 20% 46%;
+    /* Baby Bubbles Purple #c53bff → HSL 280 100% 62% */
+    --accent: 280 100% 62%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: 180 30% 90%;
+    --input: 180 30% 90%;
+    --ring: 180 85% 50%;
     --radius: 0.5rem;
+    /* Baby Bubbles custom colors */
+    --cyan-primary: 180 85% 69%;
+    --cyan-600: 180 85% 50%;
+    --cyan-700: 180 85% 42%;
+    --purple: 280 100% 62%;
+    --purple-dark: 270 50% 36%;
+    --lavender: 280 100% 94%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --background: 270 50% 8%;
+    --foreground: 180 30% 95%;
+    --card: 270 50% 10%;
+    --card-foreground: 180 30% 95%;
+    --popover: 270 50% 10%;
+    --popover-foreground: 180 30% 95%;
+    --primary: 180 85% 60%;
+    --primary-foreground: 270 50% 10%;
+    --secondary: 270 40% 25%;
+    --secondary-foreground: 180 30% 95%;
+    --muted: 270 40% 20%;
+    --muted-foreground: 180 20% 65%;
+    --accent: 280 100% 70%;
+    --accent-foreground: 270 50% 10%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --border: 270 40% 20%;
+    --input: 270 40% 20%;
+    --ring: 180 85% 60%;
   }
 }
 

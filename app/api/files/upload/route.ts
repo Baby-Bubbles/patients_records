@@ -7,38 +7,65 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File
+
+    // Support polymorphic uploads
+    const entityType = formData.get("entityType") as string || "appointment"
+    const entityId = formData.get("entityId") as string
     const appointmentId = formData.get("appointmentId") as string
 
-    console.log(`📋 Dados recebidos: file=${file?.name}, appointmentId=${appointmentId}`)
+    // Use entityId if provided, otherwise fall back to appointmentId
+    const targetId = entityId || appointmentId
+    const targetType = entityId ? entityType : "appointment"
 
-    if (!file || !appointmentId) {
+    console.log(`📋 Dados recebidos: file=${file?.name}, entityType=${targetType}, entityId=${targetId}`)
+
+    if (!file || !targetId) {
       console.error("❌ Dados obrigatórios ausentes")
-      return NextResponse.json({ error: "Arquivo e ID do atendimento são obrigatórios" }, { status: 400 })
+      return NextResponse.json({ error: "Arquivo e ID da entidade são obrigatórios" }, { status: 400 })
     }
 
-    // Validar se o appointmentId é um UUID válido
+    // Validar se o targetId é um UUID válido
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(appointmentId)) {
-      console.error(`❌ ID do atendimento inválido: ${appointmentId}`)
+    if (!uuidRegex.test(targetId)) {
+      console.error(`❌ ID inválido: ${targetId}`)
       return NextResponse.json(
-        { error: `ID do atendimento inválido. Esperado UUID, recebido: ${appointmentId}` },
+        { error: `ID inválido. Esperado UUID, recebido: ${targetId}` },
         { status: 400 },
       )
     }
 
-    // Verificar se o atendimento existe
-    const { data: appointmentExists, error: appointmentError } = await supabase
-      .from("appointments")
-      .select("id")
-      .eq("id", appointmentId)
-      .single()
+    // Verificar se a entidade existe
+    let tableName: string
+    let columnName: string
 
-    if (appointmentError || !appointmentExists) {
-      console.error(`❌ Atendimento não encontrado: ${appointmentId}`)
-      return NextResponse.json({ error: "Atendimento não encontrado" }, { status: 404 })
+    switch (targetType) {
+      case "diagnostico":
+        tableName = "diagnosticos"
+        columnName = "diagnostico_id"
+        break
+      case "atendimento":
+        tableName = "atendimentos"
+        columnName = "atendimento_id"
+        break
+      case "appointment":
+      default:
+        tableName = "appointments"
+        columnName = "appointment_id"
+        break
     }
 
-    console.log(`✅ Atendimento encontrado: ${appointmentId}`)
+    const { data: entityExists, error: entityError } = await supabase
+      .from(tableName)
+      .select("id")
+      .eq("id", targetId)
+      .single()
+
+    if (entityError || !entityExists) {
+      console.error(`❌ Entidade não encontrada: ${targetType} ${targetId}`)
+      return NextResponse.json({ error: `${targetType} não encontrado` }, { status: 404 })
+    }
+
+    console.log(`✅ Entidade encontrada: ${targetType} ${targetId}`)
 
     // Validar tipo de arquivo
     const allowedTypes = [
@@ -60,23 +87,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Tipo de arquivo não permitido: ${file.type}` }, { status: 400 })
     }
 
-    // Validar tamanho (10MB)
-    const maxSize = 10 * 1024 * 1024
-    console.log(`📏 Validando tamanho: ${file.size} bytes (máx: ${maxSize})`)
-
-    if (file.size > maxSize) {
-      console.error(`❌ Arquivo muito grande: ${file.size} bytes`)
-      return NextResponse.json(
-        { error: `Arquivo muito grande (${Math.round(file.size / 1024 / 1024)}MB). Máximo permitido: 10MB` },
-        { status: 400 },
-      )
-    }
+    console.log(`📏 Tamanho do arquivo: ${file.size} bytes`)
 
     // Gerar nome único para o arquivo
     const fileExt = file.name.split(".").pop()
     const timestamp = Date.now()
     const randomId = Math.random().toString(36).substring(2)
-    const fileName = `${appointmentId}/${timestamp}-${randomId}.${fileExt}`
+    const fileName = `${targetType}/${targetId}/${timestamp}-${randomId}.${fileExt}`
 
     console.log(`📁 Nome do arquivo no storage: ${fileName}`)
 
@@ -98,15 +115,28 @@ export async function POST(request: NextRequest) {
 
     // Salvar metadados no banco
     console.log("💾 Salvando metadados no banco...")
+
+    // Build insert data based on entity type
+    const insertData: Record<string, unknown> = {
+      original_name: file.name,
+      file_path: uploadData.path,
+      file_size: file.size,
+      file_type: file.type,
+      entity_type: targetType,
+    }
+
+    // Set the appropriate foreign key based on entity type
+    if (targetType === "diagnostico") {
+      insertData.diagnostico_id = targetId
+    } else if (targetType === "atendimento") {
+      insertData.atendimento_id = targetId
+    } else {
+      insertData.appointment_id = targetId
+    }
+
     const { data: fileRecord, error: dbError } = await supabase
       .from("file_attachments")
-      .insert({
-        appointment_id: appointmentId,
-        original_name: file.name,
-        file_path: uploadData.path,
-        file_size: file.size,
-        file_type: file.type,
-      })
+      .insert(insertData)
       .select()
       .single()
 

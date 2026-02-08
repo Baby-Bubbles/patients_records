@@ -10,31 +10,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { X, Upload, FileText, CheckCircle, AlertCircle } from "lucide-react"
-import type { Appointment } from "@/app/page"
+import { X, Upload, CheckCircle, AlertCircle } from "lucide-react"
+import type { Atendimento } from "@/app/page"
 import { formatFileSize, getFileIcon } from "@/lib/file-utils"
 import { ApiClient } from "@/lib/api-client"
 
-interface AppointmentFormProps {
-  patientId: string
+interface AtendimentoFormProps {
+  diagnosticoId: string
   patientName: string
-  onSubmit: (appointment: Omit<Appointment, "id" | "createdAt" | "patientId">) => void
+  onSubmit: (atendimento: Omit<Atendimento, "id" | "createdAt">) => Promise<Atendimento>
   onCancel: () => void
 }
 
-export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: AppointmentFormProps) {
+export function AtendimentoForm({ diagnosticoId, patientName, onSubmit, onCancel }: AtendimentoFormProps) {
   const [formData, setFormData] = useState({
     date: "",
-    doctor: "",
-    diagnosis: "",
-    anamnesis: "",
     heartRate: "",
     respiratoryRate: "",
     saturation: "",
     temperature: "",
     cardiacAuscultation: "",
     evolution: "",
-    medications: "",
     additionalGuidance: "",
   })
 
@@ -50,68 +46,44 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
     setUploadErrors([])
 
     try {
-      console.log("📝 Criando atendimento...")
-
-      // Primeiro, criar o atendimento sem arquivos
-      const appointmentData = {
-        patientId,
+      const atendimentoData = {
+        diagnosticoId,
         date: formData.date,
-        doctor: formData.doctor,
-        diagnosis: formData.diagnosis,
-        anamnesis: formData.anamnesis,
         heartRate: formData.heartRate ? Number(formData.heartRate) : undefined,
         respiratoryRate: formData.respiratoryRate ? Number(formData.respiratoryRate) : undefined,
         saturation: formData.saturation ? Number(formData.saturation) : undefined,
         temperature: formData.temperature ? Number(formData.temperature) : undefined,
-        cardiacAuscultation: formData.cardiacAuscultation,
-        evolution: formData.evolution,
-        medications: formData.medications,
-        additionalGuidance: formData.additionalGuidance,
-        attachments: [], // Sem arquivos inicialmente
+        cardiacAuscultation: formData.cardiacAuscultation || undefined,
+        evolution: formData.evolution || undefined,
+        additionalGuidance: formData.additionalGuidance || undefined,
       }
 
-      // Criar atendimento
-      const createdAppointment = await ApiClient.createAppointment(appointmentData)
-      console.log("✅ Atendimento criado:", createdAppointment.id)
+      const createdAtendimento = await onSubmit(atendimentoData)
 
-      // Se há arquivos, fazer upload agora
+      // Upload files if any
       if (selectedFiles.length > 0) {
-        console.log(`📎 Fazendo upload de ${selectedFiles.length} arquivo(s)...`)
-        const uploadedAttachments = await uploadFiles(createdAppointment.id)
-
-        // Atualizar o atendimento com os arquivos
-        if (uploadedAttachments.length > 0) {
-          const updatedAppointment = await ApiClient.getAppointment(createdAppointment.id)
-          onSubmit(updatedAppointment)
-        } else {
-          onSubmit(createdAppointment)
-        }
-      } else {
-        onSubmit(createdAppointment)
+        await uploadFiles(createdAtendimento.id)
       }
+
+      onCancel()
     } catch (error) {
-      console.error("❌ Erro ao criar atendimento:", error)
+      console.error("Erro ao criar atendimento:", error)
       alert(`Erro ao criar atendimento: ${(error as Error).message}`)
     } finally {
       setSubmitting(false)
     }
   }
 
-  const uploadFiles = async (appointmentId: string) => {
-    const uploadedAttachments = []
-    const errors = []
+  const uploadFiles = async (atendimentoId: string) => {
+    const errors: string[] = []
 
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i]
       const fileKey = `${file.name}-${i}`
 
       try {
-        console.log(`📤 Enviando ${file.name}...`)
-
-        // Iniciar progresso
         setUploadProgress((prev) => ({ ...prev, [fileKey]: 0 }))
 
-        // Simular progresso visual
         const progressInterval = setInterval(() => {
           setUploadProgress((prev) => ({
             ...prev,
@@ -119,18 +91,12 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
           }))
         }, 100)
 
-        // Fazer upload
-        const uploadedFile = await ApiClient.uploadFile(file, appointmentId)
+        await ApiClient.uploadFilePolymorphic(file, "atendimento", atendimentoId)
 
-        // Finalizar progresso
         clearInterval(progressInterval)
         setUploadProgress((prev) => ({ ...prev, [fileKey]: 100 }))
         setUploadedFiles((prev) => [...prev, file.name])
-
-        uploadedAttachments.push(uploadedFile)
-        console.log(`✅ Upload concluído: ${file.name}`)
       } catch (error) {
-        console.error(`❌ Erro no upload de ${file.name}:`, error)
         errors.push(`${file.name}: ${(error as Error).message}`)
       }
     }
@@ -138,8 +104,6 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
     if (errors.length > 0) {
       setUploadErrors(errors)
     }
-
-    return uploadedAttachments
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -154,9 +118,7 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
     const maxFiles = 5
     const maxSizeMB = 10
 
-    // Validar arquivos
     const validFiles = files.filter((file) => {
-      // Validar tipo
       const allowedTypes = [
         "application/pdf",
         "image/jpeg",
@@ -174,7 +136,6 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
         return false
       }
 
-      // Validar tamanho
       if (file.size > maxSizeMB * 1024 * 1024) {
         alert(`${file.name}: Arquivo muito grande (máx. ${maxSizeMB}MB)`)
         return false
@@ -183,14 +144,13 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
       return true
     })
 
-    // Verificar limite
     if (selectedFiles.length + validFiles.length > maxFiles) {
       alert(`Máximo de ${maxFiles} arquivos permitidos`)
       return
     }
 
     setSelectedFiles((prev) => [...prev, ...validFiles])
-    e.target.value = "" // Limpar input
+    e.target.value = ""
   }
 
   const removeFile = (index: number) => {
@@ -199,7 +159,7 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
-      <Card className="w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
+      <Card className="w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Novo Atendimento</CardTitle>
@@ -211,68 +171,19 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Informações Básicas */}
+            {/* Data e Hora */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Informações Básicas</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Data e Hora *</Label>
-                  <Input
-                    id="date"
-                    name="date"
-                    type="datetime-local"
-                    value={formData.date}
-                    onChange={handleChange}
-                    required
-                    disabled={submitting}
-                    placeholder="dd/mm/aaaa hh:mm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doctor">Pediatra/Médico *</Label>
-                  <Input
-                    id="doctor"
-                    name="doctor"
-                    value={formData.doctor}
-                    onChange={handleChange}
-                    required
-                    placeholder="Nome do pediatra/médico"
-                    disabled={submitting}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Anamnese e Diagnóstico */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Anamnese e Diagnóstico</h3>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="anamnesis">Anamnese</Label>
-                  <Textarea
-                    id="anamnesis"
-                    name="anamnesis"
-                    value={formData.anamnesis}
-                    onChange={handleChange}
-                    placeholder="História clínica, sintomas relatados, queixas principais..."
-                    rows={4}
-                    disabled={submitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="diagnosis">Diagnóstico</Label>
-                  <Textarea
-                    id="diagnosis"
-                    name="diagnosis"
-                    value={formData.diagnosis}
-                    onChange={handleChange}
-                    placeholder="Diagnóstico médico, hipóteses diagnósticas..."
-                    rows={3}
-                    disabled={submitting}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="date">Data e Hora *</Label>
+                <Input
+                  id="date"
+                  name="date"
+                  type="datetime-local"
+                  value={formData.date}
+                  onChange={handleChange}
+                  required
+                  disabled={submitting}
+                />
               </div>
             </div>
 
@@ -283,9 +194,7 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
               <h3 className="text-lg font-semibold">Sinais Vitais</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="heartRate" className="text-xs sm:text-sm">
-                    Frequência Cardíaca (FC)
-                  </Label>
+                  <Label htmlFor="heartRate" className="text-xs sm:text-sm">FC</Label>
                   <div className="relative">
                     <Input
                       id="heartRate"
@@ -294,16 +203,14 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                       value={formData.heartRate}
                       onChange={handleChange}
                       placeholder="bpm"
-                      className="text-sm pr-8 sm:pr-12"
+                      className="text-sm pr-12"
                       disabled={submitting}
                     />
-                    <span className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-xs sm:text-sm text-gray-500">
-                      bpm
-                    </span>
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500">bpm</span>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="respiratoryRate">Frequência Respiratória (FR)</Label>
+                  <Label htmlFor="respiratoryRate" className="text-xs sm:text-sm">FR</Label>
                   <div className="relative">
                     <Input
                       id="respiratoryRate"
@@ -312,15 +219,14 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                       value={formData.respiratoryRate}
                       onChange={handleChange}
                       placeholder="rpm"
+                      className="text-sm pr-12"
                       disabled={submitting}
                     />
-                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
-                      rpm
-                    </span>
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500">rpm</span>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="saturation">Saturação</Label>
+                  <Label htmlFor="saturation" className="text-xs sm:text-sm">Saturação</Label>
                   <div className="relative">
                     <Input
                       id="saturation"
@@ -331,13 +237,14 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                       value={formData.saturation}
                       onChange={handleChange}
                       placeholder="95"
+                      className="text-sm pr-8"
                       disabled={submitting}
                     />
-                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">%</span>
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500">%</span>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="temperature">Temperatura</Label>
+                  <Label htmlFor="temperature" className="text-xs sm:text-sm">Temperatura</Label>
                   <div className="relative">
                     <Input
                       id="temperature"
@@ -347,11 +254,10 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                       value={formData.temperature}
                       onChange={handleChange}
                       placeholder="36.5"
+                      className="text-sm pr-10"
                       disabled={submitting}
                     />
-                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
-                      °C
-                    </span>
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500">°C</span>
                   </div>
                 </div>
               </div>
@@ -388,25 +294,13 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="medications">Medicamentos e Uso</Label>
-                  <Textarea
-                    id="medications"
-                    name="medications"
-                    value={formData.medications}
-                    onChange={handleChange}
-                    placeholder="Medicamentos prescritos, dosagem, frequência, duração do tratamento..."
-                    rows={3}
-                    disabled={submitting}
-                  />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="additionalGuidance">Orientações Adicionais</Label>
                   <Textarea
                     id="additionalGuidance"
                     name="additionalGuidance"
                     value={formData.additionalGuidance}
                     onChange={handleChange}
-                    placeholder="Orientações gerais, cuidados especiais, retorno..."
+                    placeholder="Orientações gerais, cuidados especiais..."
                     rows={3}
                     disabled={submitting}
                   />
@@ -424,12 +318,12 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                   <Upload className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400 mx-auto mb-2" />
                   <div className="flex flex-col sm:flex-row text-xs sm:text-sm text-gray-600">
                     <label
-                      htmlFor="file-upload"
-                      className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/80 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary"
+                      htmlFor="file-upload-atend"
+                      className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/80"
                     >
                       <span>Clique para selecionar arquivos</span>
                       <input
-                        id="file-upload"
+                        id="file-upload-atend"
                         type="file"
                         multiple
                         className="sr-only"
@@ -444,7 +338,6 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                 </div>
               </div>
 
-              {/* Erros de upload */}
               {uploadErrors.length > 0 && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -453,9 +346,7 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                       <p className="font-medium">Alguns arquivos não puderam ser enviados:</p>
                       <ul className="list-disc list-inside space-y-1">
                         {uploadErrors.map((error, index) => (
-                          <li key={index} className="text-sm">
-                            {error}
-                          </li>
+                          <li key={index} className="text-sm">{error}</li>
                         ))}
                       </ul>
                     </div>
@@ -463,7 +354,6 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                 </Alert>
               )}
 
-              {/* Lista de arquivos selecionados */}
               {selectedFiles.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-gray-900">
@@ -494,11 +384,7 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                               <span className="text-lg">{getFileIcon(file.name)}</span>
                             )}
                             <div className="flex-1 min-w-0">
-                              <p
-                                className={`text-sm font-medium truncate ${
-                                  isUploaded ? "text-green-900" : "text-gray-900"
-                                }`}
-                              >
+                              <p className={`text-sm font-medium truncate ${isUploaded ? "text-green-900" : "text-gray-900"}`}>
                                 {file.name}
                               </p>
                               <p className="text-xs text-gray-500">
@@ -510,7 +396,6 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                                   <p className="text-xs text-primary mt-1">Enviando... {progress}%</p>
                                 </div>
                               )}
-                              {isUploaded && <p className="text-xs text-green-600 mt-1">✅ Upload concluído</p>}
                             </div>
                           </div>
                           {!submitting && !isUploaded && (
@@ -528,16 +413,6 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                       )
                     })}
                   </div>
-                  {selectedFiles.length > 0 && !submitting && (
-                    <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
-                      <div className="flex items-center">
-                        <FileText className="h-4 w-4 text-yellow-600 mr-2" />
-                        <p className="text-sm text-yellow-800">
-                          Os arquivos serão enviados após a criação do atendimento.
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -547,11 +422,7 @@ export function AppointmentForm({ patientId, patientName, onSubmit, onCancel }: 
                 Cancelar
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting
-                  ? selectedFiles.length > 0
-                    ? "Criando e enviando arquivos..."
-                    : "Criando..."
-                  : "Registrar Atendimento"}
+                {submitting ? "Criando..." : "Registrar Atendimento"}
               </Button>
             </div>
           </form>

@@ -7,8 +7,8 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Prontuário Eletrônico",
-  description: "Sistema de gestão de pacientes e atendimentos",
+  title: "Baby Bubbles - Prontuário Eletrônico",
+  description: "Sistema de prontuário eletrônico Baby Bubbles",
   generator: "v0.app",
   icons: {
     icon: [
