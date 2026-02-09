@@ -104,7 +104,6 @@ export function PatientDetails({
 
   const handleAddDiagnostico = async (diagnosticoData: Omit<Diagnostico, "id" | "createdAt">) => {
     const created = await onAddDiagnostico(diagnosticoData)
-    setShowDiagnosticoForm(false)
     return created
   }
 
@@ -132,8 +131,6 @@ export function PatientDetails({
 
   const handleAddAtendimento = async (atendimentoData: Omit<Atendimento, "id" | "createdAt">) => {
     const created = await onAddAtendimento(atendimentoData)
-    setShowAtendimentoForm(false)
-    await onRefreshData()
     return created
   }
 
@@ -649,7 +646,10 @@ export function PatientDetails({
             patientId={patient.id}
             patientName={patient.name}
             onSubmit={handleAddDiagnostico}
-            onCancel={() => setShowDiagnosticoForm(false)}
+            onCancel={async () => {
+              setShowDiagnosticoForm(false)
+              await onRefreshData()
+            }}
           />
         )}
 
@@ -667,7 +667,10 @@ export function PatientDetails({
             diagnosticoId={selectedDiagnostico.id}
             patientName={patient.name}
             onSubmit={handleAddAtendimento}
-            onCancel={() => setShowAtendimentoForm(false)}
+            onCancel={async () => {
+              setShowAtendimentoForm(false)
+              await onRefreshData()
+            }}
           />
         )}
 

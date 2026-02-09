@@ -367,11 +367,15 @@ Este é um projeto privado/proprietário. Todos os direitos reservados.
 
 ---
 
-**Última atualização:** 2026-01-08
-**Versão:** 0.2.0
+**Última atualização:** 2026-02-09
+**Versão:** 0.2.1
 **Status:** Em desenvolvimento ativo
 
 ## Changelog
+
+### v0.2.1 (2026-02-09)
+- 🐛 Fixed: File attachments now visible immediately after upload on Diagnosticos and Atendimentos cards
+- 🔧 Fixed data refresh timing - refresh now occurs after file uploads complete instead of before
 
 ### v0.2.0 (2026-01-08)
 - ✅ Implementado sistema de autenticação com senha única
